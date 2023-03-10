@@ -99,7 +99,7 @@ namespace StronglyTypedIds.IntegrationTests
             {
                 context.Database.EnsureCreated();
                 context.Entities.Add(
-                    new TestEntity { Id = EfCoreDefaultId.New() });
+                    new TestEntity { Id = DefaultId1.New() });
                 context.SaveChanges();
             }
             using (var context = new TestDbContext(options))
@@ -113,10 +113,10 @@ namespace StronglyTypedIds.IntegrationTests
         [InlineData("78104553-f1cd-41ec-bcb6-d3a8ff8d994d")]
         public void TypeConverter_CanConvertToAndFrom(string value)
         {
-            var converter = TypeDescriptor.GetConverter(typeof(NoJsonDefaultId));
+            var converter = TypeDescriptor.GetConverter(typeof(DefaultId));
             var id = converter.ConvertFrom(value);
-            Assert.IsType<NoJsonDefaultId>(id);
-            Assert.Equal(new NoJsonDefaultId(Guid.Parse(value)), id);
+            Assert.IsType<DefaultId>(id);
+            Assert.Equal(new DefaultId(Guid.Parse(value)), id);
 
             var reconverted = converter.ConvertTo(id, value.GetType());
             Assert.Equal(value, reconverted);
@@ -137,7 +137,7 @@ namespace StronglyTypedIds.IntegrationTests
             {
                 context.Database.EnsureCreated();
                 context.Entities.Add(
-                    new TestEntity { Id = EfCoreDefaultId.New() });
+                    new TestEntity { Id = DefaultId1.New() });
                 context.SaveChanges();
             }
             using (var context = new ConventionsDbContext(options))
@@ -159,7 +159,7 @@ namespace StronglyTypedIds.IntegrationTests
             {
                 configurationBuilder
                     .Properties<EfCoreDefaultId>()
-                    .HaveConversion<EfCoreDefaultId.EfCoreValueConverter>();
+                    .HaveConversion<DefaultId1.EfCoreValueConverter>();
             }
 
             protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -190,7 +190,7 @@ namespace StronglyTypedIds.IntegrationTests
                     {
                         builder
                             .Property(x => x.Id)
-                            .HasConversion(new EfCoreDefaultId.EfCoreValueConverter())
+                            .HasConversion(new DefaultId1.EfCoreValueConverter())
                             .ValueGeneratedNever();
                     });
             }

@@ -5,17 +5,17 @@ namespace StronglyTypedIds;
 
 internal readonly record struct StructToGenerate
 {
-    public StructToGenerate(string name, string nameSpace, StronglyTypedIdConfiguration config, ParentClass? parent)
+    public StructToGenerate(string name, string nameSpace, string? templateName, ParentClass? parent)
     {
         Name = name;
         NameSpace = nameSpace;
-        Config = config;
+        TemplateName = templateName;
         Parent = parent;
     }
 
     public string Name { get; }
     public string NameSpace { get; }
-    public StronglyTypedIdConfiguration Config { get; }
+    public string? TemplateName { get; }
     public ParentClass? Parent { get; }
 }
 

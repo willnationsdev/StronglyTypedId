@@ -10,37 +10,23 @@ namespace StronglyTypedIds
     public sealed class StronglyTypedIdDefaultsAttribute : Attribute
     {
         /// <summary>
+        /// The <see cref="Type"/> to use to store the strongly-typed ID value
+        /// </summary>
+        /// <summary>
         /// Set the default values used for strongly typed ids
         /// </summary>
-        /// <param name="backingType">The <see cref="Type"/> to use to store the strongly-typed ID value.
-        /// Defaults to <see cref="StronglyTypedIdBackingType.Guid"/></param>
-        /// <param name="converters">JSON library used to serialize/deserialize strongly-typed ID value.
-        /// Defaults to <see cref="StronglyTypedIdConverter.NewtonsoftJson"/> and <see cref="StronglyTypedIdConverter.TypeConverter"/></param>
-        /// <param name="implementations">Interfaces and patterns the strongly typed id should implement
-        /// Defaults to <see cref="StronglyTypedIdImplementations.IEquatable"/> and <see cref="StronglyTypedIdImplementations.IComparable"/></param>
-        public StronglyTypedIdDefaultsAttribute(
-            StronglyTypedIdBackingType backingType = StronglyTypedIdBackingType.Default,
-            StronglyTypedIdConverter converters = StronglyTypedIdConverter.Default,
-            StronglyTypedIdImplementations implementations = StronglyTypedIdImplementations.Default)
+        /// <param name="templateName">The name of the template to use to generate the ID.
+        /// Templates must be added to the project using the format StronglyTypedId_NAME.txt,
+        /// where NAME is the name of the template passed in <paramref name="templateName"/>.
+        /// </param>
+        public StronglyTypedIdDefaultsAttribute(string templateName)
         {
-            BackingType = backingType;
-            Converters = converters;
-            Implementations = implementations;
+            TemplateName = templateName;
         }
 
         /// <summary>
-        /// The default <see cref="Type"/> to use to store the strongly-typed ID values.
+        /// The <see cref="Type"/> to use to store the strongly-typed ID value
         /// </summary>
-        public StronglyTypedIdBackingType BackingType { get; }
-
-        /// <summary>
-        /// The default converters to create for serializing/deserializing strongly-typed ID values.
-        /// </summary>
-        public StronglyTypedIdConverter Converters { get; }
-
-        /// <summary>
-        /// Interfaces and patterns the strongly typed id should implement
-        /// </summary>
-        public StronglyTypedIdImplementations Implementations { get; }
+        public string TemplateName { get; }
     }
 }

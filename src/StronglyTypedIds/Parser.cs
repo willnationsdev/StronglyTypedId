@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Threading;
@@ -26,7 +25,7 @@ internal static class Parser
 
         var hasMisconfiguredInput = false;
         List<DiagnosticInfo>? diagnostics = null;
-        StronglyTypedIdConfiguration? config = null;
+        string? templateName = null;
 
         foreach (AttributeData attribute in structSymbol.GetAttributes())
         {
@@ -37,10 +36,6 @@ internal static class Parser
                 // wrong attribute
                 continue;
             }
-
-            StronglyTypedIdBackingType backingType = StronglyTypedIdBackingType.Default;
-            StronglyTypedIdConverter converter = StronglyTypedIdConverter.Default;
-            StronglyTypedIdImplementations implementations = StronglyTypedIdImplementations.Default;
 
             if (!attribute.ConstructorArguments.IsEmpty)
             {
@@ -56,17 +51,12 @@ internal static class Parser
                     }
                 }
 
-                switch (args.Length)
+                templateName = (string?)args[0].Value;
+                
+                if (string.IsNullOrWhiteSpace(templateName))
                 {
-                    case 3:
-                        implementations = (StronglyTypedIdImplementations)args[2].Value!;
-                        goto case 2;
-                    case 2:
-                        converter = (StronglyTypedIdConverter)args[1].Value!;
-                        goto case 1;
-                    case 1:
-                        backingType = (StronglyTypedIdBackingType)args[0].Value!;
-                        break;
+                    // TODO: add diagnostic
+                    hasMisconfiguredInput = true;
                 }
             }
 
@@ -78,54 +68,24 @@ internal static class Parser
                     if (typedConstant.Kind == TypedConstantKind.Error)
                     {
                         hasMisconfiguredInput = true;
+                        break;
                     }
-                    else
+
+                    templateName = (string?)typedConstant.Value;
+                    
+                    if (string.IsNullOrWhiteSpace(templateName))
                     {
-                        switch (arg.Key)
-                        {
-                            case "backingType":
-                                backingType = (StronglyTypedIdBackingType)typedConstant.Value!;
-                                break;
-                            case "converters":
-                                converter = (StronglyTypedIdConverter)typedConstant.Value!;
-                                break;
-                            case "implementations":
-                                implementations = (StronglyTypedIdImplementations)typedConstant.Value!;
-                                break;
-                        }
+                        // TODO: add diagnostic
+                        hasMisconfiguredInput = true;
                     }
                 }
             }
 
-            if (hasMisconfiguredInput)
-            {
-                // skip further generator execution and let compiler generate the errors
-                break;
-            }
-
-            if (!converter.IsValidFlags())
-            {
-                diagnostics ??= new();
-                diagnostics.Add(InvalidConverterDiagnostic.CreateInfo(structSyntax));
-            }
-
-            if (!Enum.IsDefined(typeof(StronglyTypedIdBackingType), backingType))
-            {
-                diagnostics ??= new();
-                diagnostics.Add(InvalidBackingTypeDiagnostic.CreateInfo(structSyntax));
-            }
-
-            if (!implementations.IsValidFlags())
-            {
-                diagnostics ??= new();
-                diagnostics.Add(InvalidImplementationsDiagnostic.CreateInfo(structSyntax));
-            }
-
-            config = new StronglyTypedIdConfiguration(backingType, converter, implementations);
+            // no need to check any more attributes
             break;
         }
 
-        if (config is null || hasMisconfiguredInput)
+        if (hasMisconfiguredInput)
         {
             var errors = diagnostics is null
                 ? EquatableArray<DiagnosticInfo>.Empty
@@ -156,22 +116,23 @@ internal static class Parser
         var errs = diagnostics is null
             ? EquatableArray<DiagnosticInfo>.Empty
             : new EquatableArray<DiagnosticInfo>(diagnostics.ToArray());
-        var toGenerate = new StructToGenerate(name: name, nameSpace: nameSpace, config: config.Value, parent: parentClass);
+        var toGenerate = new StructToGenerate(name: name, nameSpace: nameSpace, templateName: templateName, parent: parentClass);
         return new Result<(StructToGenerate, bool)>((toGenerate, true), errs);
     }
 
-    public static Result<(StronglyTypedIdConfiguration defaults, bool valid)> GetDefaults(
+    public static Result<(string templateName, bool valid)> GetDefaults(
         GeneratorAttributeSyntaxContext ctx, CancellationToken ct)
     {
         var assemblyAttributes = ctx.TargetSymbol.GetAttributes();
         if (assemblyAttributes.IsDefaultOrEmpty)
         {
-            return Result<StronglyTypedIdConfiguration>.Fail();
+            return Result<string>.Fail();
         }
 
         // We only return the first config that we find
-        StronglyTypedIdConfiguration? config = null;
+        string? templateName = null;
         List<DiagnosticInfo>? diagnostics = null;
+        bool hasMisconfiguredInput = false;
 
         foreach (AttributeData attribute in assemblyAttributes)
         {
@@ -183,7 +144,7 @@ internal static class Parser
                 continue;
             }
 
-            if (config.HasValue)
+            if (!string.IsNullOrWhiteSpace(templateName))
             {
                 if (attribute.ApplicationSyntaxReference?.GetSyntax() is { } s)
                 {
@@ -194,11 +155,6 @@ internal static class Parser
                 continue;
             }
 
-            StronglyTypedIdBackingType backingType = StronglyTypedIdBackingType.Default;
-            StronglyTypedIdConverter converter = StronglyTypedIdConverter.Default;
-            StronglyTypedIdImplementations implementations = StronglyTypedIdImplementations.Default;
-            bool hasMisconfiguredInput = false;
-        
             if (!attribute.ConstructorArguments.IsEmpty)
             {
                 // make sure we don't have any errors
@@ -212,18 +168,12 @@ internal static class Parser
                         hasMisconfiguredInput = true;
                     }
                 }
-            
-                switch (args.Length)
+                
+                templateName = (string?)args[0].Value;
+                if (string.IsNullOrWhiteSpace(templateName))
                 {
-                    case 3:
-                        implementations = (StronglyTypedIdImplementations)args[2].Value!;
-                        goto case 2;
-                    case 2:
-                        converter = (StronglyTypedIdConverter)args[1].Value!;
-                        goto case 1;
-                    case 1:
-                        backingType = (StronglyTypedIdBackingType)args[0].Value!;
-                        break;
+                    // TODO: add diagnostic
+                    hasMisconfiguredInput = true;
                 }
             }
             
@@ -235,73 +185,37 @@ internal static class Parser
                     if (typedConstant.Kind == TypedConstantKind.Error)
                     {
                         hasMisconfiguredInput = true;
+                        break;
                     }
-                    else
+
+                    templateName = (string?)typedConstant.Value;
+                    
+                    if (string.IsNullOrWhiteSpace(templateName))
                     {
-                        switch (arg.Key)
-                        {
-                            case "backingType":
-                                backingType = (StronglyTypedIdBackingType)typedConstant.Value!;
-                                break;
-                            case "converters":
-                                converter = (StronglyTypedIdConverter)typedConstant.Value!;
-                                break;
-                            case "implementations":
-                                implementations = (StronglyTypedIdImplementations)typedConstant.Value!;
-                                break;
-                        }
+                        // TODO: add diagnostic
+                        hasMisconfiguredInput = true;
                     }
+                    break;
                 }
             }
-            
+
             if (hasMisconfiguredInput)
             {
                 // skip further generator execution and let compiler generate the errors
                 break;
             }
-        
-            SyntaxNode? syntax = null;
-
-            if (!converter.IsValidFlags())
-            {
-                syntax = attribute.ApplicationSyntaxReference?.GetSyntax();
-                if (syntax is not null)
-                {
-                    diagnostics ??= new();
-                    diagnostics.Add(InvalidConverterDiagnostic.CreateInfo(syntax));
-                }
-            }
-        
-            if (!Enum.IsDefined(typeof(StronglyTypedIdBackingType), backingType))
-            {
-                syntax ??= attribute.ApplicationSyntaxReference?.GetSyntax();
-                if (syntax is not null)
-                {
-                    diagnostics ??= new();
-                    diagnostics.Add(InvalidBackingTypeDiagnostic.CreateInfo(syntax));
-                }
-            }
-        
-            if (!implementations.IsValidFlags())
-            {
-                syntax ??= attribute.ApplicationSyntaxReference?.GetSyntax();
-                if (syntax is not null)
-                {
-                    diagnostics ??= new();
-                    diagnostics.Add(InvalidImplementationsDiagnostic.CreateInfo(syntax));
-                }
-            }
-
-            config = new StronglyTypedIdConfiguration(backingType, converter, implementations);
         }
 
         var errors = diagnostics is null
             ? EquatableArray<DiagnosticInfo>.Empty
             : new EquatableArray<DiagnosticInfo>(diagnostics.ToArray());
 
-        return config.HasValue
-            ? new Result<(StronglyTypedIdConfiguration, bool)>((config.Value, true), errors)
-            : Result<StronglyTypedIdConfiguration>.Fail();
+        if (hasMisconfiguredInput)
+        {
+            return new Result<(string, bool)>((string.Empty, false), errors);
+        }
+
+        return new Result<(string, bool)>((templateName!, true), errors);
     }
 
     private static string GetNameSpace(StructDeclarationSyntax structSymbol)
